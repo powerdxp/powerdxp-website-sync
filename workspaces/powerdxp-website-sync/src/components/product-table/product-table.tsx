@@ -1,16 +1,10 @@
 "use client";
 
-// ==============================
-// 🔧 Imports
-// ==============================
 import { useState } from "react";
 import { ProductBulkActions } from "@/components/product-table/ProductBulkActions";
 import { ProductRow } from "@/components/product-table/ProductRow";
 import { ProductFilterRow } from "@/components/product-table/ProductFilterRow";
 
-// ==============================
-// 🧾 Type Definitions
-// ==============================
 type MatchType = "contains" | "startsWith" | "equals";
 
 type Product = {
@@ -29,9 +23,6 @@ type Product = {
   lastUpdated: string;
 };
 
-// ==============================
-// 🧾 Static Product Data
-// ==============================
 const initialProducts: Product[] = [
   {
     status: "Synced",
@@ -46,13 +37,10 @@ const initialProducts: Product[] = [
     upc: "123456789012",
     asin: "B00ABC1234",
     description: "Durable carbon fiber arrow for hunting and archery.",
-    lastUpdated: "2025-03-20",
+    lastUpdated: "2025-04-02",
   },
 ];
 
-// ==============================
-// 📦 Main Component
-// ==============================
 export function ProductTable() {
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [search, setSearch] = useState("");
@@ -89,46 +77,13 @@ export function ProductTable() {
   const [quantityFrom, setQuantityFrom] = useState("");
   const [quantityTo, setQuantityTo] = useState("");
 
+  const [lastUpdatedFrom, setLastUpdatedFrom] = useState("");
+  const [lastUpdatedTo, setLastUpdatedTo] = useState("");
+
   const [sortField, setSortField] = useState<keyof Product>("title");
   const [sortAsc, setSortAsc] = useState(true);
 
   const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
-
-  const clearAllFilters = () => {
-    setSearch("");
-
-    setTitleFilter("");
-    setTitleMatchType("contains");
-
-    setSkuFilter("");
-    setSkuMatchType("startsWith");
-
-    setBrandFilter("");
-    setBrandMatchType("startsWith");
-
-    setDistributorFilter("");
-    setDistributorMatchType("startsWith");
-
-    setUpcFilter("");
-    setUpcMatchType("startsWith");
-
-    setAsinFilter("");
-    setAsinMatchType("startsWith");
-
-    setDescriptionFilter("");
-    setDescriptionMatchType("contains");
-
-    setImageFilter("All");
-
-    setCostFrom("");
-    setCostTo("");
-
-    setMapFrom("");
-    setMapTo("");
-
-    setQuantityFrom("");
-    setQuantityTo("");
-  };
 
   const toggleSort = (field: keyof Product) => {
     if (field === sortField) {
@@ -141,36 +96,59 @@ export function ProductTable() {
 
   const filtered = products
     .filter((p) => {
-      const valueMatch = (field: string, value: string, type: MatchType) => {
-        const f = field.toLowerCase();
-        const v = value.toLowerCase();
-        return type === "contains" ? f.includes(v)
-          : type === "startsWith" ? f.startsWith(v)
-          : f === v;
+      const matchText = (value: string, target: string, type: MatchType) => {
+        const val = value.toLowerCase();
+        const tgt = target.toLowerCase();
+        if (type === "contains") return tgt.includes(val);
+        if (type === "startsWith") return tgt.startsWith(val);
+        if (type === "equals") return tgt === val;
+        return true;
       };
 
+      const matchesTitle = !titleFilter || matchText(titleFilter, p.title, titleMatchType);
+      const matchesSku = !skuFilter || matchText(skuFilter, p.sku, skuMatchType);
+      const matchesBrand = !brandFilter || matchText(brandFilter, p.brand, brandMatchType);
+      const matchesDistributor = !distributorFilter || matchText(distributorFilter, p.distributor, distributorMatchType);
+      const matchesUpc = !upcFilter || matchText(upcFilter, p.upc, upcMatchType);
+      const matchesAsin = !asinFilter || matchText(asinFilter, p.asin, asinMatchType);
+      const matchesDescription = !descriptionFilter || matchText(descriptionFilter, p.description, descriptionMatchType);
+
+      const matchesImage =
+        imageFilter === "All" ||
+        (imageFilter === "HasImage" && !!p.image) ||
+        (imageFilter === "NoImage" && (!p.image || p.image.trim() === ""));
+
+      const matchesCost = (!costFrom || p.cost >= parseFloat(costFrom)) &&
+                          (!costTo || p.cost <= parseFloat(costTo));
+
+      const matchesMap = (!mapFrom || p.map >= parseFloat(mapFrom)) &&
+                         (!mapTo || p.map <= parseFloat(mapTo));
+
+      const matchesQuantity = (!quantityFrom || p.quantity >= parseInt(quantityFrom)) &&
+                              (!quantityTo || p.quantity <= parseInt(quantityTo));
+
+      const matchesLastUpdated = (!lastUpdatedFrom || p.lastUpdated >= lastUpdatedFrom) &&
+                                 (!lastUpdatedTo || p.lastUpdated <= lastUpdatedTo);
+
+      const matchesSearch =
+        p.sku.includes(search) ||
+        p.title.toLowerCase().includes(search.toLowerCase()) ||
+        p.brand.toLowerCase().includes(search.toLowerCase());
+
       return (
-        (!titleFilter || valueMatch(p.title, titleFilter, titleMatchType)) &&
-        (!skuFilter || valueMatch(p.sku, skuFilter, skuMatchType)) &&
-        (!brandFilter || valueMatch(p.brand, brandFilter, brandMatchType)) &&
-        (!distributorFilter || valueMatch(p.distributor, distributorFilter, distributorMatchType)) &&
-        (!upcFilter || valueMatch(p.upc, upcFilter, upcMatchType)) &&
-        (!asinFilter || valueMatch(p.asin, asinFilter, asinMatchType)) &&
-        (!descriptionFilter || valueMatch(p.description, descriptionFilter, descriptionMatchType)) &&
-        (imageFilter === "All" ||
-          (imageFilter === "HasImage" && p.image.trim()) ||
-          (imageFilter === "NoImage" && !p.image.trim())) &&
-        (!costFrom || p.cost >= parseFloat(costFrom)) &&
-        (!costTo || p.cost <= parseFloat(costTo)) &&
-        (!mapFrom || p.map >= parseFloat(mapFrom)) &&
-        (!mapTo || p.map <= parseFloat(mapTo)) &&
-        (!quantityFrom || p.quantity >= parseInt(quantityFrom)) &&
-        (!quantityTo || p.quantity <= parseInt(quantityTo)) &&
-        (
-          p.sku.includes(search) ||
-          p.title.toLowerCase().includes(search.toLowerCase()) ||
-          p.brand.toLowerCase().includes(search.toLowerCase())
-        )
+        matchesTitle &&
+        matchesSku &&
+        matchesBrand &&
+        matchesDistributor &&
+        matchesUpc &&
+        matchesAsin &&
+        matchesDescription &&
+        matchesImage &&
+        matchesCost &&
+        matchesMap &&
+        matchesQuantity &&
+        matchesLastUpdated &&
+        matchesSearch
       );
     })
     .sort((a, b) => {
@@ -225,22 +203,13 @@ export function ProductTable() {
         ✅ This message confirms you're editing the live ProductTable
       </div>
 
-      {/* 🔍 Global Search + Clear Filters */}
-      <div className="flex items-center gap-4 mb-4">
-        <input
-          type="text"
-          placeholder="Quick Search (SKU, Title, Brand)"
-          className="border px-3 py-2 rounded w-64 text-sm"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <button
-          onClick={clearAllFilters}
-          className="text-xs px-3 py-2 border border-gray-300 rounded bg-white hover:bg-gray-100 transition"
-        >
-          🔄 Clear All Filters
-        </button>
-      </div>
+      <input
+        type="text"
+        placeholder="Quick Search (SKU, Title, Brand)"
+        className="border mb-4 px-3 py-2 rounded w-64 text-sm"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
 
       {selectedSkus.length > 0 && (
         <ProductBulkActions
@@ -317,6 +286,10 @@ export function ProductTable() {
                 setQuantityFrom={setQuantityFrom}
                 quantityTo={quantityTo}
                 setQuantityTo={setQuantityTo}
+                lastUpdatedFrom={lastUpdatedFrom}
+                setLastUpdatedFrom={setLastUpdatedFrom}
+                lastUpdatedTo={lastUpdatedTo}
+                setLastUpdatedTo={setLastUpdatedTo}
               />
             </thead>
             <tbody className="divide-y divide-gray-100">
