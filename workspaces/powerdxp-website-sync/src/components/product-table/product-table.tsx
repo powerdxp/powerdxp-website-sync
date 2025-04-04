@@ -42,44 +42,48 @@ export default function ProductTable() {
   const [currentDate, setCurrentDate] = useState<string>("");
   const [activeId, setActiveId] = useState<string | null>(null);
 
+  // ✅ Safely update date on client only
   useEffect(() => {
     setCurrentDate(new Date().toLocaleDateString());
   }, []);
+
+  // ✅ Memoized data — prevents re-renders on every drag
+  const data = useMemo(() => [
+    {
+      sku: "SKU123",
+      title: "Test Product",
+      description: "Mock item for preview",
+      cost: 10,
+      price: 19.99,
+      minPrice: 17.49,
+      maxPrice: 22.99,
+      map: 18.5,
+      quantity: 12,
+      brand: "BrandX",
+      vendor: "VendorA",
+      distributor: "DistOne",
+      weight: 1.2,
+      width: 3.4,
+      length: 5.6,
+      shippingCost: 4.99,
+      imageCount: 1,
+      imageUrl: "https://via.placeholder.com/40",
+      status: "Active",
+      visibility: "Visible",
+      blocked: false,
+      lastUpdated: currentDate,
+      createdAt: currentDate,
+      upc: "1234567890",
+      asin: "B000123456",
+    }
+  ], [currentDate]);
 
   const resetColumnOrder = () => {
     setColumnOrder(defaultColumnOrder);
   };
 
   const table = useReactTable({
-    data: [
-      {
-        sku: "SKU123",
-        title: "Test Product",
-        description: "Mock item for preview",
-        cost: 10,
-        price: 19.99,
-        minPrice: 17.49,
-        maxPrice: 22.99,
-        map: 18.5,
-        quantity: 12,
-        brand: "BrandX",
-        vendor: "VendorA",
-        distributor: "DistOne",
-        weight: 1.2,
-        width: 3.4,
-        length: 5.6,
-        shippingCost: 4.99,
-        imageCount: 1,
-        imageUrl: "https://via.placeholder.com/40",
-        status: "Active",
-        visibility: "Visible",
-        blocked: false,
-        lastUpdated: currentDate,
-        createdAt: currentDate,
-        upc: "1234567890",
-        asin: "B000123456",
-      },
-    ],
+    data, // ✅ Uses memoized array
     columns,
     state: { columnOrder },
     onColumnOrderChange: setColumnOrder,
@@ -94,7 +98,6 @@ export default function ProductTable() {
     (col) => col.id === activeId
   );
 
-  // ✅ Fixed typing
   const handleDragEnd = (event: any) => {
     const activeId = event?.active?.id;
     const overId = event?.over?.id;
@@ -121,7 +124,6 @@ export default function ProductTable() {
 
       <DndContext
         collisionDetection={closestCenter}
-        // ✅ Fixed typing here too
         onDragStart={(event: any) => {
           setActiveId(event?.active?.id ?? null);
         }}
