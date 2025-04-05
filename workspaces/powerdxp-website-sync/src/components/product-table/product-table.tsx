@@ -102,11 +102,10 @@ export default function ProductTable() {
 
   const activeColumn = table.getAllLeafColumns().find((col) => col.id === activeId);
 
-  // ✅ Setup drag sensors with activation constraint
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5, // drag only starts after slight movement
+        distance: 5,
       },
     })
   );
@@ -114,7 +113,6 @@ export default function ProductTable() {
   const handleDragStart = (event: any) => {
     const target = event?.active?.data?.current?.target;
 
-    // ❌ Prevent drag if clicking resizer or form control
     if (
       target?.closest(".resizer") ||
       target?.closest("input") ||
@@ -140,7 +138,8 @@ export default function ProductTable() {
   };
 
   return (
-    <div className="rounded-md border overflow-auto">
+    <div className="flex flex-col h-full"> {/* Step 1: Full-height layout */}
+      {/* Header bar */}
       <div className="bg-white sticky top-0 z-20 px-4 py-2 border-b flex justify-between items-center">
         <span className="font-semibold text-sm text-gray-700">Manage Columns</span>
         <Button variant="outline" size="sm" onClick={resetColumnOrder}>
@@ -148,58 +147,62 @@ export default function ProductTable() {
         </Button>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        modifiers={[restrictToHorizontalAxis]}
-      >
-        <SortableContext
-          items={table.getAllLeafColumns().map((col) => col.id!)}
-          strategy={horizontalListSortingStrategy}
+      {/* Scrollable table area */}
+      <div className="flex-1 overflow-auto border-t">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          modifiers={[restrictToHorizontalAxis]}
         >
-          <table className="w-full text-sm text-left table-fixed">
-            <thead className="bg-gray-100 sticky top-[40px] z-10">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <React.Fragment key={headerGroup.id}>
-                  <tr className="h-10">
-                    {headerGroup.headers.map((header) => (
-                      <SortableHeaderCell key={header.id} header={header} table={table} />
+          <SortableContext
+            items={table.getAllLeafColumns().map((col) => col.id!)}
+            strategy={horizontalListSortingStrategy}
+          >
+            <table className="w-full text-sm text-left table-fixed">
+              <thead className="bg-gray-100 sticky top-[40px] z-10">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <React.Fragment key={headerGroup.id}>
+                    <tr className="h-10">
+                      {headerGroup.headers.map((header) => (
+                        <SortableHeaderCell key={header.id} header={header} table={table} />
+                      ))}
+                    </tr>
+                    <ProductFilterRow
+                      table={table}
+                      filterValues={filterValues}
+                      setFilterValues={updateFilterValue}
+                    />
+                  </React.Fragment>
+                ))}
+              </thead>
+              <tbody>
+                {table.getRowModel().rows.map((row) => (
+                  <tr key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-3 py-2 border-b">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
                     ))}
                   </tr>
-                  <ProductFilterRow
-                    table={table}
-                    filterValues={filterValues}
-                    setFilterValues={updateFilterValue}
-                  />
-                </React.Fragment>
-              ))}
-            </thead>
-            <tbody>
-              {table.getRowModel().rows.map((row) => (
-                <tr key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-3 py-2 border-b">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </SortableContext>
+                ))}
+              </tbody>
+            </table>
+          </SortableContext>
 
-        {/* ✅ Drag preview overlay */}
-        <DragOverlay>
-          {activeColumn?.columnDef?.header ? (
-            <div className="bg-white border px-2 py-1 text-sm font-medium shadow-md rounded">
-              {String(activeColumn.columnDef.header)}
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          {/* Drag preview overlay */}
+          <DragOverlay>
+            {activeColumn?.columnDef?.header ? (
+              <div className="bg-white border px-2 py-1 text-sm font-medium shadow-md rounded">
+                {String(activeColumn.columnDef.header)}
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      </div>
 
+      {/* Footer pinned at bottom */}
       <PaginationFooter table={table} />
     </div>
   );
