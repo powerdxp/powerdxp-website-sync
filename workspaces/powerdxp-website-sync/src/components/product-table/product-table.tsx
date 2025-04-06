@@ -193,60 +193,65 @@ export default function ProductTable() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="bg-white sticky top-0 z-20 px-4 py-2 border-b flex justify-between items-center">
+      {/* Reset Columns Bar - Sticky */}
+      <div className="bg-white sticky top-[64px] z-30 px-4 py-2 border-b flex justify-between items-center">
         <span className="font-semibold text-sm text-gray-700">Manage Columns</span>
         <Button variant="outline" size="sm" onClick={resetColumnOrder}>
           🔄 Reset Columns
         </Button>
       </div>
 
-      <div className="flex-1 overflow-auto border-t">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          modifiers={[restrictToHorizontalAxis]}
-        >
-          <SortableContext
-            items={table.getAllLeafColumns().map((col) => col.id!)}
-            strategy={horizontalListSortingStrategy}
+      {/* Table Scroll Container */}
+      <div className="flex-1 relative border-t">
+        <div className="absolute inset-0 overflow-auto">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            modifiers={[restrictToHorizontalAxis]}
           >
-            <table className="w-full text-sm text-left table-fixed">
-            <thead className="bg-gray-100 sticky top-[0px] z-10">   {/* top-[0px] works because the scroll container starts after the bar above */}
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <React.Fragment key={headerGroup.id}>
-                    <tr className="h-10">
-                      {headerGroup.headers.map((header) => (
-                        <SortableHeaderCell key={header.id} header={header} table={table} />
-                      ))}
-                    </tr>
-                    <ProductFilterRow
-                      table={table}
-                      filterValues={filterValues}
-                      setFilterValues={updateFilterValue}
-                    />
-                  </React.Fragment>
-                ))}
-              </thead>
-              <tbody className="bg-white">
-                {table.getRowModel().rows.map((row) => (
-                  <ProductRow key={row.id} row={row} />
-                ))}
-              </tbody>
-            </table>
-          </SortableContext>
+            <SortableContext
+              items={table.getAllLeafColumns().map((col) => col.id!)}
+              strategy={horizontalListSortingStrategy}
+            >
+              <table className="w-full text-sm text-left table-fixed">
+                <thead className="bg-gray-100 sticky top-0 z-10">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <React.Fragment key={headerGroup.id}>
+                      <tr className="h-10">
+                        {headerGroup.headers.map((header) => (
+                          <SortableHeaderCell key={header.id} header={header} table={table} />
+                        ))}
+                      </tr>
+                      <ProductFilterRow
+                        table={table}
+                        filterValues={filterValues}
+                        setFilterValues={updateFilterValue}
+                      />
+                    </React.Fragment>
+                  ))}
+                </thead>
+                <tbody className="bg-white">
+                  {table.getRowModel().rows.map((row) => (
+                    <ProductRow key={row.id} row={row} />
+                  ))}
+                </tbody>
+              </table>
+            </SortableContext>
 
-          <DragOverlay>
-            {activeColumn?.columnDef?.header ? (
-              <div className="bg-white border px-2 py-1 text-sm font-medium shadow-md rounded">
-                {String(activeColumn.columnDef.header)}
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+            <DragOverlay>
+              {activeColumn?.columnDef?.header ? (
+                <div className="bg-white border px-2 py-1 text-sm font-medium shadow-md rounded">
+                  {String(activeColumn.columnDef.header)}
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        </div>
       </div>
 
+      {/* Footer stays fixed below the table */}
       <PaginationFooter table={table} />
     </div>
   );
