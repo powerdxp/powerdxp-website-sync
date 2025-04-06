@@ -1,5 +1,5 @@
 import React from "react";
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, FilterFn } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 
@@ -68,6 +68,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       },
       size: 100,
       meta: { filterType: "image" },
+      filterFn: "image" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "sku",
@@ -75,6 +77,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       header: "SKU",
       size: 120,
       meta: { filterType: "text" },
+      filterFn: "fuzzyText" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "title",
@@ -82,6 +86,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       header: "Title",
       size: 200,
       meta: { filterType: "text" },
+      filterFn: "fuzzyText" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "description",
@@ -93,6 +99,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       },
       size: 240,
       meta: { filterType: "text" },
+      filterFn: "fuzzyText" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "cost",
@@ -101,6 +109,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       cell: ({ getValue }) => `$${Number(getValue()).toFixed(2)}`,
       size: 100,
       meta: { filterType: "range" },
+      filterFn: "range" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "price",
@@ -109,6 +119,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       cell: ({ getValue }) => `$${Number(getValue()).toFixed(2)}`,
       size: 100,
       meta: { filterType: "range" },
+      filterFn: "range" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "minPrice",
@@ -120,6 +132,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       },
       size: 100,
       meta: { filterType: "range" },
+      filterFn: "range" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "maxPrice",
@@ -131,6 +145,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       },
       size: 100,
       meta: { filterType: "range" },
+      filterFn: "range" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "map",
@@ -139,6 +155,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       cell: ({ getValue }) => `$${Number(getValue()).toFixed(2)}`,
       size: 100,
       meta: { filterType: "range" },
+      filterFn: "range" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "quantity",
@@ -146,6 +164,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       header: "Quantity",
       size: 100,
       meta: { filterType: "range" },
+      filterFn: "range" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "brand",
@@ -153,6 +173,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       header: "Brand",
       size: 140,
       meta: { filterType: "text" },
+      filterFn: "fuzzyText" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "vendor",
@@ -160,6 +182,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       header: "Vendor",
       size: 140,
       meta: { filterType: "text" },
+      filterFn: "fuzzyText" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "distributor",
@@ -167,6 +191,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       header: "Distributor",
       size: 140,
       meta: { filterType: "text" },
+      filterFn: "fuzzyText" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "upc",
@@ -174,6 +200,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       header: "UPC",
       size: 140,
       meta: { filterType: "text" },
+      filterFn: "fuzzyText" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "asin",
@@ -181,6 +209,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       header: "ASIN",
       size: 140,
       meta: { filterType: "text" },
+      filterFn: "fuzzyText" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "weight",
@@ -188,6 +218,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       header: "Weight (lbs)",
       size: 100,
       meta: { filterType: "range" },
+      filterFn: "range" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "width",
@@ -195,6 +227,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       header: "Width (in)",
       size: 100,
       meta: { filterType: "range" },
+      filterFn: "range" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "length",
@@ -202,6 +236,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       header: "Length (in)",
       size: 100,
       meta: { filterType: "range" },
+      filterFn: "range" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "shippingCost",
@@ -210,6 +246,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       cell: ({ getValue }) => `$${Number(getValue()).toFixed(2)}`,
       size: 120,
       meta: { filterType: "range" },
+      filterFn: "range" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "imageCount",
@@ -217,17 +255,21 @@ export function generateColumns(): ColumnDef<Product>[] {
       header: "Image Count",
       size: 100,
       meta: { filterType: "range" },
+      filterFn: "range" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "blocked",
       accessorKey: "blocked",
       header: "Blocked",
+      size: 80,
+      meta: { filterType: "dropdown" },
+      filterFn: "dropdown" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
       cell: React.memo(({ getValue }) => {
         const checked = getValue() as boolean;
         return <Checkbox checked={checked} />;
       }),
-      size: 80,
-      meta: { filterType: "dropdown" },
     },
     {
       id: "status",
@@ -235,6 +277,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       header: "Status",
       size: 120,
       meta: { filterType: "dropdown" },
+      filterFn: "dropdown" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "visibility",
@@ -242,11 +286,17 @@ export function generateColumns(): ColumnDef<Product>[] {
       header: "Visibility",
       size: 120,
       meta: { filterType: "dropdown" },
+      filterFn: "dropdown" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
     },
     {
       id: "lastUpdated",
       accessorKey: "lastUpdated",
       header: "Last Updated",
+      size: 120,
+      meta: { filterType: "date" },
+      filterFn: "dateRange" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
       cell: ({ getValue }) => {
         const value = getValue() as string;
         const parsedDate = new Date(value);
@@ -254,13 +304,15 @@ export function generateColumns(): ColumnDef<Product>[] {
           ? format(parsedDate, "MM/dd/yyyy")
           : "Invalid Date";
       },
-      size: 120,
-      meta: { filterType: "date" },
     },
     {
       id: "createdAt",
       accessorKey: "createdAt",
       header: "Created Date",
+      size: 120,
+      meta: { filterType: "date" },
+      filterFn: "dateRange" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
       cell: ({ getValue }) => {
         const value = getValue() as string;
         const parsedDate = new Date(value);
@@ -268,8 +320,6 @@ export function generateColumns(): ColumnDef<Product>[] {
           ? format(parsedDate, "MM/dd/yyyy")
           : "Invalid Date";
       },
-      size: 120,
-      meta: { filterType: "date" },
     },
   ];
 }
