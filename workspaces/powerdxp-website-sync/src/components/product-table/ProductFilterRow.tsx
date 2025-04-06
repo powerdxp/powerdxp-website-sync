@@ -16,7 +16,6 @@ export const ProductFilterRow = React.memo(function ProductFilterRow({
 }: ProductFilterRowProps) {
   const activeStyle = "border-blue-500 ring-1 ring-blue-300";
 
-  // ✅ Memoized filter setter
   const handleChange = useCallback(
     (id: string, value: any) => {
       setFilterValues(id, value);
@@ -124,9 +123,9 @@ export const ProductFilterRow = React.memo(function ProductFilterRow({
   };
 
   return (
-    <tr className="bg-white text-xs">
+    <tr className="bg-gray-100 text-xs border-b border-gray-300">
       {table.getAllLeafColumns().map((column) => (
-        <th key={column.id} className="p-2 min-w-[80px]">
+        <th key={column.id} className="px-2 py-2 min-w-[80px]">
           {renderFilter(column)}
         </th>
       ))}
