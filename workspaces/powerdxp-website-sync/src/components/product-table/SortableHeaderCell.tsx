@@ -48,7 +48,7 @@ export function SortableHeaderCell({ header, table }: SortableHeaderCellProps) {
         position: isDragging ? "relative" : undefined,
       }}
       className={cn(
-        "group relative bg-white border-b text-sm font-medium text-gray-800 align-middle select-none whitespace-nowrap",
+        "group relative bg-gray-100 border-b text-sm font-medium text-gray-800 align-middle select-none whitespace-nowrap",
         isResizing && "border-blue-500 border-b-2"
       )}
       data-column-id={header.column.id}
