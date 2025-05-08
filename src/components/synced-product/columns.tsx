@@ -2,12 +2,15 @@ import React from "react";
 import { ColumnDef, FilterFn } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
+import { AvailableFromCell } from "./AvailableFromCell";
 
-// ✅ Product type definition
+// ✅ Enhanced Product type with lock flags
 export type Product = {
   sku: string;
   title: string;
+  title_locked?: boolean;
   description?: string;
+  description_locked?: boolean;
   cost: number;
   price: number;
   minPrice?: number;
@@ -15,7 +18,9 @@ export type Product = {
   map: number;
   quantity: number;
   brand: string;
+  brand_locked?: boolean;
   vendor: string;
+  vendor_locked?: boolean;
   distributor: string;
   weight: number;
   width: number;
@@ -29,17 +34,41 @@ export type Product = {
   lastUpdated: string;
   createdAt: string;
   upc?: string;
+  upc_locked?: boolean;
   asin?: string;
+
+  // ✅ Sync tracking
+  approved_for_shopify: boolean;
+  synced_to_shopify: boolean;
 };
+
+// 🔧 Utility for showing lock icon next to locked fields
+function LockableCell({
+  value,
+  locked,
+}: {
+  value: string | number | undefined;
+  locked?: boolean;
+}) {
+  return (
+    <span className="flex items-center gap-1">
+      {value ?? "-"}
+      {locked && <span title="Locked" className="text-xs">🔒</span>}
+    </span>
+  );
+}
 
 export function generateColumns(): ColumnDef<Product>[] {
   return [
+    // ✅ Select checkbox
     {
       id: "select",
       header: ({ table }) => (
         <Checkbox
           checked={table.getIsAllPageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          onCheckedChange={(value) =>
+            table.toggleAllPageRowsSelected(!!value)
+          }
           aria-label="Select all"
         />
       ),
@@ -54,6 +83,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       enableHiding: false,
       size: 40,
     },
+
+    // ✅ Image column
     {
       id: "imageUrl",
       accessorKey: "imageUrl",
@@ -61,7 +92,11 @@ export function generateColumns(): ColumnDef<Product>[] {
       cell: ({ getValue }) => {
         const url = getValue() as string | undefined;
         return url ? (
-          <img src={url} alt="product" className="w-10 h-10 object-cover rounded" />
+          <img
+            src={url}
+            alt="product"
+            className="w-10 h-10 object-cover rounded"
+          />
         ) : (
           <span className="text-muted-foreground italic">No Image</span>
         );
@@ -71,6 +106,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       filterFn: "image" as unknown as FilterFn<Product>,
       enableColumnFilter: true,
     },
+
+    // 🔢 SKU
     {
       id: "sku",
       accessorKey: "sku",
@@ -80,6 +117,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       filterFn: "fuzzyText" as unknown as FilterFn<Product>,
       enableColumnFilter: true,
     },
+
+    // 📝 Title (with lock support)
     {
       id: "title",
       accessorKey: "title",
@@ -88,44 +127,39 @@ export function generateColumns(): ColumnDef<Product>[] {
       meta: { filterType: "text" },
       filterFn: "fuzzyText" as unknown as FilterFn<Product>,
       enableColumnFilter: true,
+      cell: ({ row }) =>
+        LockableCell({
+          value: row.original.title,
+          locked: row.original.title_locked,
+        }),
     },
+
+    // 🧾 Description (lock support optional)
     {
       id: "description",
       accessorKey: "description",
       header: "Description",
-      cell: ({ getValue }) => {
-        const value = getValue() as string;
-        return value ? value.slice(0, 60) + (value.length > 60 ? "..." : "") : "-";
-      },
       size: 240,
       meta: { filterType: "text" },
       filterFn: "fuzzyText" as unknown as FilterFn<Product>,
       enableColumnFilter: true,
+      cell: ({ row }) =>
+        LockableCell({
+          value:
+            row.original.description?.slice(0, 60) +
+            (row.original.description?.length > 60 ? "..." : ""),
+          locked: row.original.description_locked,
+        }),
     },
-    {
-      id: "cost",
-      accessorKey: "cost",
-      header: "Cost",
-      cell: ({ getValue }) => `$${Number(getValue()).toFixed(2)}`,
-      size: 100,
-      meta: { filterType: "range" },
-      filterFn: "range" as unknown as FilterFn<Product>,
-      enableColumnFilter: true,
-    },
-    {
-      id: "price",
-      accessorKey: "price",
-      header: "Price",
-      cell: ({ getValue }) => `$${Number(getValue()).toFixed(2)}`,
-      size: 100,
-      meta: { filterType: "range" },
-      filterFn: "range" as unknown as FilterFn<Product>,
-      enableColumnFilter: true,
-    },
-    {
-      id: "minPrice",
-      accessorKey: "minPrice",
-      header: "Min Price",
+
+    // ✅ Pricing & Range Fields
+    ...["cost", "price", "minPrice", "maxPrice", "map"].map((key) => ({
+      id: key,
+      accessorKey: key,
+      header: key
+        .replace("minPrice", "Min Price")
+        .replace("maxPrice", "Max Price")
+        .toUpperCase(),
       cell: ({ getValue }) => {
         const val = getValue() as number | undefined;
         return val !== undefined ? `$${val.toFixed(2)}` : "-";
@@ -134,30 +168,9 @@ export function generateColumns(): ColumnDef<Product>[] {
       meta: { filterType: "range" },
       filterFn: "range" as unknown as FilterFn<Product>,
       enableColumnFilter: true,
-    },
-    {
-      id: "maxPrice",
-      accessorKey: "maxPrice",
-      header: "Max Price",
-      cell: ({ getValue }) => {
-        const val = getValue() as number | undefined;
-        return val !== undefined ? `$${val.toFixed(2)}` : "-";
-      },
-      size: 100,
-      meta: { filterType: "range" },
-      filterFn: "range" as unknown as FilterFn<Product>,
-      enableColumnFilter: true,
-    },
-    {
-      id: "map",
-      accessorKey: "map",
-      header: "MAP",
-      cell: ({ getValue }) => `$${Number(getValue()).toFixed(2)}`,
-      size: 100,
-      meta: { filterType: "range" },
-      filterFn: "range" as unknown as FilterFn<Product>,
-      enableColumnFilter: true,
-    },
+    })),
+
+    // 📦 Quantity
     {
       id: "quantity",
       accessorKey: "quantity",
@@ -167,6 +180,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       filterFn: "range" as unknown as FilterFn<Product>,
       enableColumnFilter: true,
     },
+
+    // 🏷 Brand (with lock support)
     {
       id: "brand",
       accessorKey: "brand",
@@ -175,7 +190,14 @@ export function generateColumns(): ColumnDef<Product>[] {
       meta: { filterType: "text" },
       filterFn: "fuzzyText" as unknown as FilterFn<Product>,
       enableColumnFilter: true,
+      cell: ({ row }) =>
+        LockableCell({
+          value: row.original.brand,
+          locked: row.original.brand_locked,
+        }),
     },
+
+    // 🏬 Vendor (with lock support)
     {
       id: "vendor",
       accessorKey: "vendor",
@@ -184,7 +206,14 @@ export function generateColumns(): ColumnDef<Product>[] {
       meta: { filterType: "text" },
       filterFn: "fuzzyText" as unknown as FilterFn<Product>,
       enableColumnFilter: true,
+      cell: ({ row }) =>
+        LockableCell({
+          value: row.original.vendor,
+          locked: row.original.vendor_locked,
+        }),
     },
+
+    // 🚚 Distributor
     {
       id: "distributor",
       accessorKey: "distributor",
@@ -194,6 +223,20 @@ export function generateColumns(): ColumnDef<Product>[] {
       filterFn: "fuzzyText" as unknown as FilterFn<Product>,
       enableColumnFilter: true,
     },
+
+    // ✅ NEW: Available From (distributor list)
+    {
+      id: "available_from",
+      header: "Available From",
+      accessorKey: "sku",
+      cell: ({ row }) => <AvailableFromCell sku={row.original.sku} />,
+      size: 200,
+      enableSorting: false,
+      meta: { filterType: "text" },
+      enableColumnFilter: false,
+    },
+
+    // 🧪 UPC (with lock)
     {
       id: "upc",
       accessorKey: "upc",
@@ -202,7 +245,14 @@ export function generateColumns(): ColumnDef<Product>[] {
       meta: { filterType: "text" },
       filterFn: "fuzzyText" as unknown as FilterFn<Product>,
       enableColumnFilter: true,
+      cell: ({ row }) =>
+        LockableCell({
+          value: row.original.upc,
+          locked: row.original.upc_locked,
+        }),
     },
+
+    // 🔎 ASIN
     {
       id: "asin",
       accessorKey: "asin",
@@ -212,43 +262,24 @@ export function generateColumns(): ColumnDef<Product>[] {
       filterFn: "fuzzyText" as unknown as FilterFn<Product>,
       enableColumnFilter: true,
     },
-    {
-      id: "weight",
-      accessorKey: "weight",
-      header: "Weight (lbs)",
+
+    // ⚖️ Dimensions & Shipping
+    ...[
+      ["weight", "Weight (lbs)"],
+      ["width", "Width (in)"],
+      ["length", "Length (in)"],
+      ["shippingCost", "Shipping ($)"],
+    ].map(([key, label]) => ({
+      id: key,
+      accessorKey: key,
+      header: label,
       size: 100,
       meta: { filterType: "range" },
       filterFn: "range" as unknown as FilterFn<Product>,
       enableColumnFilter: true,
-    },
-    {
-      id: "width",
-      accessorKey: "width",
-      header: "Width (in)",
-      size: 100,
-      meta: { filterType: "range" },
-      filterFn: "range" as unknown as FilterFn<Product>,
-      enableColumnFilter: true,
-    },
-    {
-      id: "length",
-      accessorKey: "length",
-      header: "Length (in)",
-      size: 100,
-      meta: { filterType: "range" },
-      filterFn: "range" as unknown as FilterFn<Product>,
-      enableColumnFilter: true,
-    },
-    {
-      id: "shippingCost",
-      accessorKey: "shippingCost",
-      header: "Shipping ($)",
-      cell: ({ getValue }) => `$${Number(getValue()).toFixed(2)}`,
-      size: 120,
-      meta: { filterType: "range" },
-      filterFn: "range" as unknown as FilterFn<Product>,
-      enableColumnFilter: true,
-    },
+    })),
+
+    // 🖼 Image count
     {
       id: "imageCount",
       accessorKey: "imageCount",
@@ -258,6 +289,8 @@ export function generateColumns(): ColumnDef<Product>[] {
       filterFn: "range" as unknown as FilterFn<Product>,
       enableColumnFilter: true,
     },
+
+    // 🚫 Blocked
     {
       id: "blocked",
       accessorKey: "blocked",
@@ -271,55 +304,68 @@ export function generateColumns(): ColumnDef<Product>[] {
         return <Checkbox checked={checked} />;
       }),
     },
-    {
-      id: "status",
-      accessorKey: "status",
-      header: "Status",
+
+    // ✅ Shopify sync flags
+    ...[
+      ["approved_for_shopify", "Approved?"],
+      ["synced_to_shopify", "Synced?"],
+    ].map(([key, label]) => ({
+      id: key,
+      accessorKey: key,
+      header: label,
+      size: 100,
+      meta: { filterType: "dropdown" },
+      filterFn: "dropdown" as unknown as FilterFn<Product>,
+      enableColumnFilter: true,
+      cell: React.memo(({ getValue }) => {
+        const val = getValue() as boolean;
+        return key === "synced_to_shopify" ? (
+          <span
+            className={`px-2 py-1 text-xs rounded-full ${
+              val ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-800"
+            }`}
+          >
+            {val ? "Yes" : "No"}
+          </span>
+        ) : (
+          <Checkbox checked={val} />
+        );
+      }),
+    })),
+
+    // 🔄 Status / Visibility dropdowns
+    ...[
+      ["status", "Status"],
+      ["visibility", "Visibility"],
+    ].map(([key, label]) => ({
+      id: key,
+      accessorKey: key,
+      header: label,
       size: 120,
       meta: { filterType: "dropdown" },
       filterFn: "dropdown" as unknown as FilterFn<Product>,
       enableColumnFilter: true,
-    },
-    {
-      id: "visibility",
-      accessorKey: "visibility",
-      header: "Visibility",
-      size: 120,
-      meta: { filterType: "dropdown" },
-      filterFn: "dropdown" as unknown as FilterFn<Product>,
-      enableColumnFilter: true,
-    },
-    {
-      id: "lastUpdated",
-      accessorKey: "lastUpdated",
-      header: "Last Updated",
+    })),
+
+    // 📅 Dates
+    ...[
+      ["lastUpdated", "Last Updated"],
+      ["createdAt", "Created Date"],
+    ].map(([key, label]) => ({
+      id: key,
+      accessorKey: key,
+      header: label,
       size: 120,
       meta: { filterType: "date" },
       filterFn: "dateRange" as unknown as FilterFn<Product>,
       enableColumnFilter: true,
       cell: ({ getValue }) => {
         const value = getValue() as string;
-        const parsedDate = new Date(value);
-        return parsedDate instanceof Date && !isNaN(parsedDate.getTime())
-          ? format(parsedDate, "MM/dd/yyyy")
+        const parsed = new Date(value);
+        return parsed instanceof Date && !isNaN(parsed.getTime())
+          ? format(parsed, "MM/dd/yyyy")
           : "Invalid Date";
       },
-    },
-    {
-      id: "createdAt",
-      accessorKey: "createdAt",
-      header: "Created Date",
-      size: 120,
-      meta: { filterType: "date" },
-      filterFn: "dateRange" as unknown as FilterFn<Product>,
-      enableColumnFilter: true,
-      cell: ({ getValue }) => {
-        const value = getValue() as string;
-        const parsedDate = new Date(value);
-        return parsedDate instanceof Date && !isNaN(parsedDate.getTime())
-          ? format(parsedDate, "MM/dd/yyyy")
-          : "Invalid Date";
-      },
-    },
+    })),
   ];
 }

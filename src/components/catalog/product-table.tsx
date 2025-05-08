@@ -6,8 +6,6 @@ import {
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
-  getPaginationRowModel,
-  flexRender,
   ColumnOrderState,
   RowSelectionState,
   ColumnFiltersState,
@@ -26,6 +24,7 @@ import {
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
+
 import { Product, generateColumns } from "./columns";
 import { ProductFilterRow } from "./ProductFilterRow";
 import { SortableHeaderCell } from "./SortableHeaderCell";
@@ -33,12 +32,14 @@ import { PaginationFooter } from "@/components/layout/PaginationFooter";
 import { Button } from "../ui/button";
 import { ProductRow } from "./ProductRow";
 import { fetchNormalizedProducts } from "@/lib/supabase/fetchNormalizedProducts";
+import { supabase } from "@/lib/supabase/browserClient";
+import { fuzzyText } from "@/lib/utils/filterFns";
 
 export default function ProductTable() {
-  const [products, setProducts] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 100;
+  const [products, setProducts] = useState<Product[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [filterValues, setFilterValues] = useState<Record<string, any>>({});
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -52,52 +53,48 @@ export default function ProductTable() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  // 🔄 Fetch live data from Supabase
-  useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const data = await fetchNormalizedProducts({ page: currentPage, pageSize });
+  const loadProducts = async () => {
+    if (isLoading || !hasMore) return;
+    setIsLoading(true);
 
-        if (!data || !Array.isArray(data)) {
-          console.warn("⚠️ No data or unexpected format returned:", data);
-          throw new Error("Invalid Supabase data");
-        }
+    try {
+      const res = await fetchNormalizedProducts({
+        pageSize: 100,
+        cursor,
+        filters: filterValues,
+      });
 
-        console.log("✅ Products loaded into table:", data.length);
-        setProducts(data);
-      } catch (error: any) {
-        console.error("❌ Failed to load products:", error.message || error);
-      } finally {
-        setIsLoading(false);
-      }
+      setProducts((prev) => [...prev, ...res.data]);
+      setCursor(res.nextCursor);
+      setHasMore(Boolean(res.nextCursor));
+    } catch (err) {
+      console.error("❌ Failed to fetch products:", err);
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    loadData();
-  }, [currentPage]);
+  useEffect(() => {
+    setProducts([]);
+    setCursor(null);
+    setHasMore(true);
+    loadProducts();
+  }, [filterValues]);
 
   useEffect(() => {
     const mappedFilters: ColumnFiltersState = [];
-
     for (const key in filterValues) {
       const value = filterValues[key];
       if (value === "" || value === null || value === undefined) continue;
-
       const filterType = columns.find((c) => c.id === key)?.meta?.filterType;
-
       if (filterType === "range") {
-        if (value.min || value.max) {
-          mappedFilters.push({ id: key, value });
-        }
+        if (value.min || value.max) mappedFilters.push({ id: key, value });
       } else if (filterType === "date") {
-        if (value.from || value.to) {
-          mappedFilters.push({ id: key, value });
-        }
+        if (value.from || value.to) mappedFilters.push({ id: key, value });
       } else {
         mappedFilters.push({ id: key, value });
       }
     }
-
     setColumnFilters(mappedFilters);
   }, [filterValues, columns]);
 
@@ -110,79 +107,20 @@ export default function ProductTable() {
       columnOrder,
       rowSelection,
       columnFilters,
-      pagination: { pageIndex: 0, pageSize: 100 },
     },
     onColumnOrderChange: setColumnOrder,
     onRowSelectionChange: setRowSelection,
     onColumnFiltersChange: setColumnFilters,
+    filterFns: {
+      fuzzyText,
+    },
     enableRowSelection: true,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     enableColumnResizing: true,
     columnResizeMode: "onChange",
-    filterFns: {
-      fuzzyText: (row, columnId, filterValue) => {
-        const raw = row.getValue(columnId);
-        const value = String(filterValue?.value ?? filterValue ?? "").toLowerCase();
-        const mode = filterValue?.mode ?? "contains";
-        const rowValue = String(raw ?? "").toLowerCase();
-
-        switch (mode) {
-          case "contains":
-            return rowValue.includes(value);
-          case "startsWith":
-            return rowValue.startsWith(value);
-          case "equals":
-            return rowValue === value;
-          case "notEquals":
-            return rowValue !== value;
-          case "isEmpty":
-            return rowValue === "";
-          case "isNotEmpty":
-            return rowValue !== "";
-          default:
-            return true;
-        }
-      },
-      range: (row, columnId, value) => {
-        const val = Number(row.getValue(columnId));
-        const min = Number(value?.min);
-        const max = Number(value?.max);
-        if (!isNaN(min) && val < min) return false;
-        if (!isNaN(max) && val > max) return false;
-        return true;
-      },
-      dateRange: (row, columnId, value) => {
-        const date = new Date(row.getValue(columnId));
-        const from = value?.from ? new Date(value.from) : null;
-        const to = value?.to ? new Date(value.to) : null;
-        if (from && date < from) return false;
-        if (to && date > to) return false;
-        return true;
-      },
-      dropdown: (row, columnId, value) => {
-        if (value === "All" || !value) return true;
-        return String(row.getValue(columnId)) === value;
-      },
-      image: (row, columnId, value) => {
-        const count = Number(row.getValue("imageCount"));
-        switch (value) {
-          case "noImage":
-            return count === 0;
-          case "atLeastOne":
-            return count >= 1;
-          case "twoOrMore":
-            return count >= 2;
-          default:
-            return true;
-        }
-      },
-    },
   });
-
-  const activeColumn = table.getAllLeafColumns().find((col) => col.id === activeId);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -204,6 +142,29 @@ export default function ProductTable() {
     setColumnOrder((old) => arrayMove(old, old.indexOf(activeId), old.indexOf(overId)));
   };
 
+  async function sendSelectedToSyncedPage() {
+    const selectedRows = table.getSelectedRowModel().rows;
+    const selectedSkus = selectedRows.map((row) => row.original.sku);
+    if (selectedSkus.length === 0) return;
+
+    try {
+      const { error } = await supabase
+        .from("products_normalized")
+        .update({ status: "approved_for_sync" })
+        .in("sku", selectedSkus);
+
+      if (error) {
+        console.error("❌ Supabase error:", error.message || error);
+        alert("Failed to sync selected products.");
+      } else {
+        alert(`${selectedSkus.length} product(s) sent to Synced Page ✅`);
+        window.location.reload();
+      }
+    } catch (err: any) {
+      console.error("❌ Error syncing products:", err.message || err);
+    }
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="bg-white sticky top-[60px] z-30 px-4 py-2 border-b flex justify-between items-center">
@@ -215,7 +176,7 @@ export default function ProductTable() {
 
       <div className="flex-1 relative border-t">
         <div className="absolute inset-0 overflow-auto">
-          {isLoading ? (
+          {isLoading && products.length === 0 ? (
             <div className="p-4 text-center text-gray-500">Loading products...</div>
           ) : (
             <DndContext
@@ -255,9 +216,9 @@ export default function ProductTable() {
               </SortableContext>
 
               <DragOverlay>
-                {activeColumn?.columnDef?.header ? (
+                {activeId ? (
                   <div className="bg-white border px-2 py-1 text-sm font-medium shadow-md rounded">
-                    {String(activeColumn.columnDef.header)}
+                    {String(activeId)}
                   </div>
                 ) : null}
               </DragOverlay>
@@ -268,22 +229,24 @@ export default function ProductTable() {
 
       <PaginationFooter table={table} />
 
-      <div className="flex justify-between items-center px-4 py-4 border-t bg-white">
-        <button
-          className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
-          disabled={currentPage === 1}
-          onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-        >
-          ⬅ Prev
-        </button>
-        <span className="text-sm text-gray-600">Page {currentPage}</span>
-        <button
-          className="px-4 py-2 bg-gray-200 rounded"
-          onClick={() => setCurrentPage((prev) => prev + 1)}
-        >
-          Next ➡
-        </button>
-      </div>
+      {hasMore && (
+        <div className="p-4 text-center">
+          <Button onClick={loadProducts} disabled={isLoading}>
+            {isLoading ? "Loading..." : "⬇️ Load More"}
+          </Button>
+        </div>
+      )}
+
+      {Object.keys(rowSelection).length > 0 && (
+        <div className="fixed bottom-20 right-6 z-50">
+          <Button
+            className="bg-blue-600 text-white hover:bg-blue-700 shadow"
+            onClick={sendSelectedToSyncedPage}
+          >
+            🚀 Send {Object.keys(rowSelection).length} to Synced Page
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

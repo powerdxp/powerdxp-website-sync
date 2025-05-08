@@ -25,14 +25,22 @@ const imageOptions = [
   { label: "Two or More", value: "twoOrMore" },
 ];
 
+// ✅ Updated with more dropdown options (like "Active"/"Inactive")
+const dropdownOptions: Record<string, string[]> = {
+  status: ["All", "Synced", "Incomplete", "Unreviewed", "Blocked"],
+  visibility: ["All", "Visible", "Hidden"],
+  blocked: ["All", "Blocked", "Unblocked"],
+  active: ["All", "Active", "Inactive"],
+  enabled: ["All", "Yes", "No"], // optional
+};
+
 export const ProductFilterRow = React.memo(function ProductFilterRow({
   table,
   filterValues,
   setFilterValues,
 }: ProductFilterRowProps) {
-  const activeStyle = "border-blue-500 ring-1 ring-blue-300";
-
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  const activeStyle = "border-blue-500 ring-1 ring-blue-300";
 
   const handleChange = useCallback(
     (id: string, value: any) => {
@@ -107,6 +115,7 @@ export const ProductFilterRow = React.memo(function ProductFilterRow({
         );
 
       case "dropdown":
+        const options = dropdownOptions[id] || ["All", "Yes", "No"];
         return (
           <select
             value={value || "All"}
@@ -115,13 +124,11 @@ export const ProductFilterRow = React.memo(function ProductFilterRow({
               value && value !== "All" ? activeStyle : "border-gray-300"
             }`}
           >
-            <option value="All">All</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-            <option value="Visible">Visible</option>
-            <option value="Hidden">Hidden</option>
-            <option value="Blocked">Blocked</option>
-            <option value="Unblocked">Unblocked</option>
+            {options.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
           </select>
         );
 

@@ -1,11 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Header, Table, flexRender } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
-import { ResizableHandle } from "../ui/ResizableHandle";
+import { ResizableHandle } from "./ResizableHandle";
 import { Product } from "./columns";
 
 interface SortableHeaderCellProps {
@@ -14,6 +14,13 @@ interface SortableHeaderCellProps {
 }
 
 export function SortableHeaderCell({ header, table }: SortableHeaderCellProps) {
+  const [isClient, setIsClient] = useState(false);
+
+  // ✅ This does NOT prevent hook calls, just rendering of unstable markup
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const isResizing = header.column.getIsResizing();
   const canResize = header.column.getCanResize();
 
@@ -29,7 +36,6 @@ export function SortableHeaderCell({ header, table }: SortableHeaderCellProps) {
   });
 
   const columnDefHeader = header.column.columnDef.header;
-
   const label =
     typeof columnDefHeader === "function"
       ? flexRender(columnDefHeader, header.getContext())
@@ -49,21 +55,22 @@ export function SortableHeaderCell({ header, table }: SortableHeaderCellProps) {
       }}
       className={cn(
         "group relative bg-gray-100 text-sm font-medium text-gray-800 align-middle select-none whitespace-nowrap",
-        "border border-gray-300", // ✅ NEW: Adds all borders to header cell
+        "border border-gray-300",
         isResizing && "border-blue-500 border-b-2"
       )}
       data-column-id={header.column.id}
     >
-      <div
-        {...attributes}
-        {...listeners}
-        className={cn(
-          "flex items-center justify-between h-10 px-2",
-          "cursor-move"
-        )}
-      >
-        <div className="truncate w-full">{label}</div>
-      </div>
+      {isClient ? (
+        <div
+          {...attributes}
+          {...listeners}
+          className="flex items-center justify-between h-10 px-2 cursor-move"
+        >
+          <div className="truncate w-full">{label}</div>
+        </div>
+      ) : (
+        <div className="h-10 px-2">{label}</div>
+      )}
 
       {canResize && <ResizableHandle header={header} />}
     </th>

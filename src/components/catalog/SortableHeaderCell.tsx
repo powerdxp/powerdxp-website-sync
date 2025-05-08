@@ -5,7 +5,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Header, Table, flexRender } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
-import { ResizableHandle } from "../ui/ResizableHandle";
+import { ResizableHandle } from "./ResizableHandle";
 import { Product } from "./columns";
 
 interface SortableHeaderCellProps {

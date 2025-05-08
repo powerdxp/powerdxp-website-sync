@@ -4,7 +4,7 @@ import React from "react";
 import { Header } from "@tanstack/react-table";
 import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Product } from "../catalog/columns";
+import { Product } from "./columns"; // ✅ Synced-product-specific Product type
 
 interface ResizableHandleProps {
   header: Header<Product, unknown>;

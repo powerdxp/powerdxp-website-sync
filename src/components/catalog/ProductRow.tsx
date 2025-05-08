@@ -9,8 +9,18 @@ interface ProductRowProps {
 }
 
 export const ProductRow = React.memo(function ProductRow({ row }: ProductRowProps) {
+  const isSelected = row.getIsSelected();
+
   return (
-    <tr className="transition-colors duration-200 hover:bg-blue-50 odd:bg-white even:bg-gray-50">
+    <tr
+      className={`transition-colors duration-200 ${
+        isSelected
+          ? "bg-blue-100" // ✅ Highlight selected rows
+          : row.index % 2 === 0
+          ? "bg-white"
+          : "bg-gray-50"
+      } hover:bg-blue-50`}
+    >
       {row.getVisibleCells().map((cell) => {
         const columnId = cell.column.id;
 

@@ -7,7 +7,6 @@ import {
   getFilteredRowModel,
   getSortedRowModel,
   getPaginationRowModel,
-  flexRender,
   ColumnOrderState,
   RowSelectionState,
   ColumnFiltersState,
@@ -26,32 +25,48 @@ import {
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
+
 import { Product, generateColumns } from "./columns";
 import { ProductFilterRow } from "./ProductFilterRow";
 import { SortableHeaderCell } from "./SortableHeaderCell";
-import { PaginationFooter } from "@/components/layout/PaginationFooter"
+import { PaginationFooter } from "@/components/layout/PaginationFooter";
 import { Button } from "../ui/button";
 import { ProductRow } from "./ProductRow";
+import { fetchReadyToSyncProducts } from "@/lib/supabase/fetchReadyToSyncProducts";
+import { ProductBulkActions } from "./ProductBulkActions";
 
 export default function ProductTable() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [filterValues, setFilterValues] = useState<Record<string, any>>({});
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-
-  const updateFilterValue = (key: string, value: any) =>
-    setFilterValues((prev) => ({ ...prev, [key]: value }));
+  const [columnOrder, setColumnOrder] = useState<ColumnOrderState>([]);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const columns = useMemo(() => generateColumns(), []);
   const defaultColumnOrder = useMemo(() => columns.map((col) => col.id!), [columns]);
-  const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(defaultColumnOrder);
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [currentDate, setCurrentDate] = useState("");
-  const [activeId, setActiveId] = useState<string | null>(null);
 
   useEffect(() => {
-    setCurrentDate(new Date().toLocaleDateString());
+    setColumnOrder(defaultColumnOrder);
+  }, [defaultColumnOrder]);
+
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        const result = await fetchReadyToSyncProducts({ page: 1, pageSize: 100 });
+        setProducts(result || []);
+      } catch (err) {
+        console.error("❌ Failed to fetch ready-to-sync products:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadData();
   }, []);
 
-  // ✅ Sync filterValues to columnFilters
   useEffect(() => {
     const mappedFilters: ColumnFiltersState = [];
 
@@ -74,101 +89,16 @@ export default function ProductTable() {
       }
     }
 
-    console.log("🔍 filterValues:", filterValues);
-    console.log("✅ columnFilters sent to table:", mappedFilters);
-
     setColumnFilters(mappedFilters);
   }, [filterValues, columns]);
+
+  const updateFilterValue = (key: string, value: any) =>
+    setFilterValues((prev) => ({ ...prev, [key]: value }));
 
   const resetColumnOrder = () => setColumnOrder(defaultColumnOrder);
 
   const table = useReactTable({
-    data: useMemo(
-      () => [
-        {
-          sku: "SKU001",
-          title: "Fishing Rod",
-          description: "Durable rod for precision casting.",
-          cost: 25.5,
-          price: 49.99,
-          minPrice: 40.0,
-          maxPrice: 60.0,
-          map: 45.99,
-          quantity: 10,
-          brand: "ProCast",
-          vendor: "Vendor A",
-          distributor: "Zanders",
-          weight: 1.2,
-          width: 2.5,
-          length: 4.0,
-          shippingCost: 7.99,
-          imageCount: 1,
-          imageUrl: "/placeholder.png",
-          status: "Active",
-          visibility: "Visible",
-          blocked: false,
-          lastUpdated: currentDate,
-          createdAt: currentDate,
-          upc: "1234567890",
-          asin: "B000000001",
-        },
-        {
-          sku: "SKU002",
-          title: "Hunting Backpack",
-          description: "Durable backpack with hydration system and gear compartments...",
-          cost: 54.49,
-          price: 74.99,
-          minPrice: 65.0,
-          maxPrice: 80.0,
-          map: 69.99,
-          quantity: 12,
-          brand: "HuntMax",
-          vendor: "Vendor B",
-          distributor: "CWR",
-          weight: 2.0,
-          width: 3.0,
-          length: 5.0,
-          shippingCost: 9.99,
-          imageCount: 2,
-          imageUrl: "/placeholder.png",
-          status: "Active",
-          visibility: "Visible",
-          blocked: false,
-          lastUpdated: currentDate,
-          createdAt: currentDate,
-          upc: "2345678901",
-          asin: "B000000002",
-        },
-        {
-          sku: "SKU003",
-          title: "LED Flashlight 1000 Lumens",
-          description: "Compact flashlight for tactical or everyday use.",
-          cost: 22.5,
-          price: 29.99,
-          minPrice: 25.0,
-          maxPrice: 34.0,
-          map: 27.0,
-          quantity: 30,
-          brand: "BrightBeam",
-          vendor: "Vendor C",
-          distributor: "Zanders",
-          weight: 0.8,
-          width: 1.2,
-          length: 3.0,
-          shippingCost: 3.99,
-          imageCount: 1,
-          imageUrl: "/placeholder.png",
-          status: "Active",
-          visibility: "Visible",
-          blocked: false,
-          lastUpdated: currentDate,
-          createdAt: currentDate,
-          upc: "3456789012",
-          asin: "B000000003",
-        },
-      ],
-      [currentDate]
-    ),
+    data: products,
     columns,
     state: {
       columnOrder,
@@ -186,8 +116,6 @@ export default function ProductTable() {
     getPaginationRowModel: getPaginationRowModel(),
     enableColumnResizing: true,
     columnResizeMode: "onChange",
-
-    // ✅ Filter functions that match your UI filterValues
     filterFns: {
       fuzzyText: (row, columnId, filterValue) => {
         const raw = row.getValue(columnId);
@@ -246,8 +174,6 @@ export default function ProductTable() {
         }
       },
     },
-
-    // debugTable: true,
   });
 
   const activeColumn = table.getAllLeafColumns().find((col) => col.id === activeId);
@@ -281,6 +207,40 @@ export default function ProductTable() {
           🔄 Reset Columns
         </Button>
       </div>
+
+      {/* ✅ Bulk Actions Bar */}
+      <ProductBulkActions
+        selectedCount={Object.keys(rowSelection).length}
+        selectedSkus={table.getSelectedRowModel().rows.map((r) => r.original.sku)}
+        onSelectFiltered={() => {
+          const filteredRows = table.getFilteredRowModel().rows;
+          const selection: Record<string, boolean> = {};
+          filteredRows.forEach((row) => {
+            selection[row.id] = true;
+          });
+          setRowSelection(selection);
+        }}
+        onDelete={() => alert("🧨 Delete logic not implemented")}
+        onExport={() => alert("📦 Export logic not implemented")}
+        onPushToShopify={async () => {
+          const skus = table.getSelectedRowModel().rows.map((r) => r.original.sku);
+          if (skus.length === 0) return;
+
+          const { pushToShopify } = await import("@/lib/shopify/pushToShopify");
+          const result = await pushToShopify(skus);
+
+          if (result === "success") {
+            alert(`✅ Pushed ${skus.length} SKU(s) to Shopify!`);
+          } else {
+            alert("❌ Failed to push some SKUs.");
+          }
+
+          // Refresh product list after sync
+          const fresh = await fetchReadyToSyncProducts({ page: 1, pageSize: 100 });
+          setProducts(fresh || []);
+          setRowSelection({});
+        }}
+      />
 
       {/* Scrollable table area */}
       <div className="flex-1 relative border-t">
